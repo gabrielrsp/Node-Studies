@@ -15,11 +15,50 @@ Primary file for the API
 Node Built In module Http Server, that let you listen on ports and respond with a Data
 */
 var http = require('http');
+var https = require('https');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
+var config = require('./config')
+var fs = require('fs');
 
-// The server should respond to all requests with a string
-var server = http.createServer(function (req, res) { //every time localhost is called, this function is called and req,res are brand new
+// Instantiate the HTTP Server
+var httpServer = http.createServer(function (req, res) { //every time localhost is called, this function is called and req,res are brand new
+  unifiedServer(req, res)
+  // Log the request path
+  //console.log('Request received on path: ', trimmedPath + ' with this method: ' + method +' with these query string parameters: ', queryStringObject)
+
+})
+
+// Start the  HTTP Server
+httpServer.listen(config.httpPort, function () {
+  console.log("The server is listening on port " + config.httpPort)
+})
+
+
+// Instantiate the HTTPS Server
+var httpsServerOptions = {
+  'key': fs.readFileSync('./https/key.pem'),  //for synchronous read
+  'cert': fs.readFileSync('./https/cert.pe')
+}
+
+var httpsServer = https.createServer(httpsServerOptions, function (req, res) { //every time localhost is called, this function is called and req,res are brand new
+  unifiedServer(req, res)
+  // Log the request path
+  //console.log('Request received on path: ', trimmedPath + ' with this method: ' + method +' with these query string parameters: ', queryStringObject)
+
+})
+
+// Start the HTTPS Server
+httpsServer.listen(config.httpsPort, function () {
+  console.log("The server is listening on port " + config.httpsPort)
+})
+
+
+// Curl (“Client URL”) comando usado como abreviação para verificar a conectividade da URL, 
+//curl localhost:3000
+
+// All the server logic for both the http and https server
+var unifiedServer = function (req, res) {
 
   // Get the URL and parse it
   var parsedUrl = url.parse(req.url, true); //parsedUrl will receive an object with a bunch of keys about the request made
@@ -33,7 +72,6 @@ var server = http.createServer(function (req, res) { //every time localhost is c
 
   // Get the HTTP Method
   var method = req.method
-
 
   //Get the payload, if any
   var decoder = new StringDecoder('utf-8');
@@ -66,12 +104,12 @@ var server = http.createServer(function (req, res) { //every time localhost is c
     }
 
     //Route the request to the handler specified in the router
-    chosenHandler(data, function(statusCode, payload) {
+    chosenHandler(data, function (statusCode, payload) {
       // Use the status code called back by the handler, or default to 200
-      statusCode = typeof(statusCode) === 'number' ? statusCode : 200
+      statusCode = typeof (statusCode) === 'number' ? statusCode : 200
 
       // Use the payload callback by the handler or default to empty object
-      payload = typeof(payload) === 'object' ? payload : {}
+      payload = typeof (payload) === 'object' ? payload : {}
 
 
       // Convert the payload to a string
@@ -91,35 +129,21 @@ var server = http.createServer(function (req, res) { //every time localhost is c
 
   })
 
-  // Log the request path
-  //console.log('Request received on path: ', trimmedPath + ' with this method: ' + method +' with these query string parameters: ', queryStringObject)
-
-})
-
-
-// Start the server and have it listen on port 3000
-server.listen(3000, function () {
-  console.log("The server is listening on port 3000 now")
-})
-
-// Curl (“Client URL”) comando usado como abreviação para verificar a conectividade da URL, 
-//curl localhost:3000
+}
 
 
 // Define the handlers
 var handlers = {}
 
-// Sample handler
-handlers.sample = function (data, callback) {
-  // Callback a HTTP status code and payload object
-  callback(406, { 'name': 'sample handler' })
-}
-
 handlers.notFound = function (data, callback) {
   callback(404)
 }
 
+handlers.ping = function(data, callback) {
+  callback(200)
+}
+
 // Define a request router
 var router = {
-  'sample': handlers.sample
+  'ping': handlers.ping
 }
